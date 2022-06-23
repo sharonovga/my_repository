@@ -1,0 +1,81 @@
+---
+title: "Eurovision"
+author: "Georgy Sharonov"
+date: "23 06 2022"
+output: html_document
+---
+
+Load in data
+
+```{r}
+eurovision <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-05-17/eurovision.csv')
+library(dplyr)
+library(ggplot2)
+install.packages("remotes")
+library(remotes)
+install_github('https://github.com/jimjam-slam/ggflags')
+library(ggflags)
+```
+Look in data
+
+```{r}
+glimpse(eurovision)
+head(eurovision)
+unique(eurovision$section)
+
+eurovision_finals <- eurovision %>%
+  filter(section == "grand-final" | section == "final")
+eurovision_finals
+```
+most wins
+```{r}
+eurovision_finals %>%
+filter (winner == TRUE) %>%
+count(artist_country) %>%
+      arrange(desc(n))
+```
+
+```{r}
+country_agg <- eurovision_finals %>%
+  mutate(winner_num = as.numeric(winner)) %>%
+  group_by(artist_country, country_emoji) %>%
+  summarise(avg_points = mean(total_points, na.rm = TRUE),
+            avg_rank = mean(rank, na.rm = TRUE),
+            tot_wins = sum(winner_num, na.rm = TRUE),
+            tot_years = n()) %>%
+  arrange(desc(tot_wins)) %>%
+  mutate(win_ration = tot_wins/tot_years*100) %>%
+  arrange(desc(win_ration))
+```
+
+```{r}
+#install.packages("forcats")
+library(forcats)
+library(dplyr)
+
+newplot <- country_agg %>%
+  filter(tot_wins>0)%>%
+  filter(country_emoji != 'white_circle') %>%
+  ggplot(aes (x = avg_points, y = win_ration, country = country_emoji)) + geom_flag()+
+  labs(title = 'Eurovision countries win ratio',
+       x='Average points per country',
+       y='Countries win ratio', caption = 'Georgy')+
+  theme_minimal(base_family = 'Avenir')
+
+ggsave(filename = 'Eurovision_win_ratio.jpeg', newplot)
+ # arrange(desc(win_ration))
+```
+
+```{r}
+flags <- eurovision_finals$country_emoji
+#flags
+
+cleanflags <- gsub(':flag_','',x=flags) %>%
+  gsub(':','',x=.)
+
+cleanflags
+
+eurovision_finals$country_emoji <- cleanflags
+```
+
+
